@@ -13,8 +13,8 @@
         <input v-model="iptvalue" placeholder="What needs to be done?" class="new-todo" @keyup.enter = "onkeyup">
     </header>
     <section class="main">
-        <input id="toggle-all" type="checkbox" class="toggle-all">
-        <label for="toggle-all">Mark all as complete</label>
+        <input id="toggle-all" type="checkbox" class="toggle-all" v-model="markAllStatus">
+        <label for="toggle-all" v-on:click="markAll">Mark all as complete</label>
         <ul class="todo-list">
             <li v-for="item in todos" :class="item.completed?'completed' : ''">
                 <div class="view">
@@ -30,11 +30,11 @@
                 <span class="todo-count">
                     <strong>{{itemLeft}}</strong> item left</span>
         <ul class="filters">
-            <li><a href="#/" class="selected">All</a></li>
-            <li><a href="#/active">Active</a></li>
-            <li><a href="#/completed">Completed</a></li>
+            <li><a href="#" :class="selected1?'selected' : ''" v-on:click="clickAll">All</a></li>
+            <li><a href="#" :class="selected2?'selected' : ''" v-on:click="clickActive">Active</a></li>
+            <li><a href="#" :class="selected3?'selected' : ''" v-on:click="clickCompleted">Completed</a></li>
         </ul>
-        <button class="clear-completed">Clear completed</button>
+        <button class="clear-completed" v-on:click="clickClearCompleted">Clear completed</button>
     </footer>
 </section>
 <script src="js/vue.js"></script>
@@ -43,8 +43,12 @@
     new Vue({
         el: "#todoapp",
         data: {
+            markAllStatus:false,
             itemLeft:0,
             iptvalue:'',
+            selected1:true,
+            selected2:false,
+            selected3:false,
             todos: [{
                 id: 1,
                 title: '吃饭',
@@ -57,17 +61,19 @@
                 id: 3,
                 title: '打豆豆',
                 completed: true
-            }]
+            }],
+            temps:[]
         },
         created:function(){
             //计算itemleft
             this.getItemLeft();
+            this.temps = this.todos;
         },
         methods:{
             onkeyup:function(event){
                 if(event.keyCode === 13){
                     console.log(event);
-                    var nextId = this.$options.methods.getNextId(this);
+                    var nextId = this.getNextId(this);
                     this.todos.push(
                         {id:nextId,title:this.iptvalue,completed:false}
                     );
@@ -99,6 +105,17 @@
             checkInOut:function(item){
                 item.completed = !item.completed;
                 this.getItemLeft();
+                //同步markAllStatus
+                if(this.itemLeft == 0){
+                    this.markAllStatus = !this.markAllStatus;
+                }else{
+                    if(this.markAllStatus){
+                        if(this.todos.length != this.itemLeft){
+                            this.markAllStatus = !this.markAllStatus;
+                        }
+                    }
+                }
+
             },
             //删除商品
             delItem:function(item){
@@ -106,6 +123,62 @@
                     if(this.todos[i] == item){
                         this.todos.splice(i,1);
                     }
+                }
+            },
+            //全选按钮
+            markAll:function(){
+                for(var i=0;i<this.todos.length;i++){
+                    this.todos[i].completed = !this.markAllStatus;
+                }
+                this.getItemLeft();
+            },
+            //点击all
+            clickAll:function(){
+                this.todos = this.temps;
+                this.selected1 = true;
+                this.selected2 = this.selected3 = !this.selected1;
+            },
+            //点击active
+            clickActive:function(){
+                var newA = [];
+                for(var i=0;i<this.temps.length;i++){
+                    if(!this.temps[i].completed){
+                        newA.push(this.temps[i]);
+                    }
+                }
+                this.todos = newA;
+                this.selected2 = true;
+                this.selected1 = this.selected3 = !this.selected2;
+                this.getItemLeft();
+            },
+            //点击completed
+            clickCompleted:function(){
+                var newA = [];
+                for(var i=0;i<this.temps.length;i++){
+                    if(this.temps[i].completed){
+                        newA.push(this.temps[i]);
+                    }
+                }
+                this.todos = newA;
+                this.selected3= true;
+                this.selected1 = this.selected2 = !this.selected3;
+                this.getItemLeft();
+            },
+            clickClearCompleted:function(){
+                //移除temp中的completed元素
+                var newA = [];
+                for(var i=0;i<this.temps.length;i++){
+                    if(!this.temps[i].completed){
+                        newA.push(this.temps[i]);
+                    }
+                }
+                this.temps = newA;
+                if(this.selected1){
+                    this.clickAll();
+                }else if(this.selected2){
+                    this.clickActive();
+                }else{
+                    this.clickCompleted();
                 }
             }
         }
